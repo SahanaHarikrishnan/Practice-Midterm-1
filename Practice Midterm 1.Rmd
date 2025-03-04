@@ -1,0 +1,140 @@
+---
+title: "Practice Midterm 1"
+output: html_document
+date: "2025-03-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(fpp2)
+data("arrivals")
+str(arrivals)
+
+us_arrivals <- arrivals[, "US"]
+
+autoplot(us_arrivals) + 
+  ggtitle("Time Series Plot: Arrivals from US to Australia") + 
+  xlab("Year") + 
+  ylab("# of Arrivals") + 
+  theme_minimal()
+
+```
+
+```{r}
+## According to the time series plot, there is an overall upward trend from 1980 to now, in the number of arrivals from US to Australia. The arrivals peaked around 2010, and was the lowest in the early 1980s. There are consistent peaks and troughs by month, indicating that there is strong seasonality which makes sense because travel is ideal in specific months. The fluctuations and variabiloity increases as time goes on, with extreme peaks and troughs. Lastly, the increase is at a slower rate from the 1990s to the 2000s, indicating an economic or global trend such as the recession, which impacted travel during those years. 
+```
+
+```{r}
+summary(us_arrivals)
+
+boxplot(us_arrivals, 
+        main = "Box Plot: Arrivals from US to Australia",
+        ylab = "# of Arrivals",
+        col = "pink",
+        border = "black")
+
+```
+
+```{r}
+###  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+### 23.72   63.95   85.88   84.85  108.98  136.09 
+
+### From the boxplot I notice that there don't seem to be extremely unusual outliers or a particularly large skewness, which is also supported by the fact that the median and mean, 85.88 and 84.85 respectively, are very close meaning the distribution is fairly symmetrical. The range is 112.37 which is very large, which could be because of the trends and seasonality over time. The interquartile range is 45.03.
+```
+
+
+```{r}
+# Check dataset structure
+str(arrivals)
+
+# Extract US arrivals as a time series
+us_arrivals <- arrivals[, "US"]
+
+# Decompose using a flexible seasonal window (Fixes identical seasonal values issue)
+decomp <- stl(us_arrivals, s.window = 7)  # Allows seasonality to evolve over time
+
+# Plot the decomposition
+autoplot(decomp) + ggtitle("Decomposition of US Arrivals Time Series")
+
+# Extract the seasonal component
+seasonal_indices <- decomp$time.series[, "seasonal"]
+print(seasonal_indices)  # Displays all seasonal values
+
+
+# Calculate monthly averages of seasonal indices to find the highest and lowest months
+monthly_indices <- tapply(seasonal_indices, cycle(us_arrivals), mean)
+
+# Find the month with the highest and lowest seasonal effect
+highest_month <- which.max(monthly_indices)
+lowest_month <- which.min(monthly_indices)
+
+# Print highest and lowest seasonal effect months
+cat("Highest seasonal effect occurs in month:", highest_month, "\n")
+cat("Lowest seasonal effect occurs in month:", lowest_month, "\n")
+
+# Adjust for seasonality (remove seasonal component)
+seasonally_adjusted <- seasadj(decomp)
+
+# Plot actual vs seasonally adjusted time series
+autoplot(us_arrivals, series="Actual") +
+  autolayer(seasonally_adjusted, series="Seasonally Adjusted", color="red") +
+  ggtitle("Actual vs Seasonally Adjusted Time Series") +
+  ylab("# of Arrivals") +
+  theme_minimal()
+
+
+```
+```{r}
+### Yes, the time-series is seasonal because as we can see from the seasonal section of the decomposition, there is a clear and constant pattern. 
+
+### The decomposition is multiplicative, because we can see increased seasonality over time and the peaks and troughs become more extreme as the years go on and more travelers are arriving. 
+
+### Highest: Month 1(Jan), which could be because this is Winter break in America and the hottest month in Australia. Lowest: Month 2(Feb), which could be because school is back in session and February is also a shorter month which could affect the values
+
+### The actual line has many more fluctuations from seasonality and the adjusted one is more smooth .
+```
+
+
+```{r}
+naive <- naive(us_arrivals, h = 12) 
+
+autoplot(naive$residuals) +
+  ggtitle("Residuals from Naïve Forecast") +
+  ylab("Residuals")
+
+hist(naive$residuals, breaks = 20, col = "purple", main = "Histogram of Residuals", xlab = "Residuals")
+
+plot(naive$fitted, naive$residuals,
+     main = "Fitted Values vs Residuals",
+     xlab = "Fitted Values", ylab = "Residuals",
+     col = "pink", pch = 20)
+abline(h = 0, col = "green", lwd = 2)
+
+plot(us_arrivals, naive$residuals,
+     main = "Actual Values vs Residuals",
+     xlab = "Actual Values", ylab = "Residuals",
+     col = "red", pch = 20)
+abline(h = 0, col = "green", lwd = 2)
+
+Acf(naive$residuals, main = "ACF of Residuals")
+
+accuracy(naive)
+
+```
+```{r}
+### The residual plot indicates that the model is showing the overall trend, as the fluctuations are happening around 0. But the residuals are fluctuating more as time goes on which may mean naive is not the most suitable.
+
+### The histogram shows a fairly normal distribution as seen by the bell curve, but as we can see there is some skewness meaning the model is not extremely reliable. 
+
+### The fitted values vs. residuals have a pattern, showing that the model is not reliable.
+
+### The actual values vs. residuals shows a pattern as well, meaning there are errors in the model.
+
+### 
+
+### The accuracy is not very good and errors are fairly high. 
+```
+
